@@ -22,9 +22,9 @@ python3 -m venv venv
 source venv/bin/activate
 
 echo -e "${BLUE}Xivi: Installing Python dependencies... 📚${RESET}"
-pip install flask flask_httpauth requests
+pip install flask flask_httpauth requests hashlib docker cryptography json random requests
 
-API_KEY=$(openssl rand -hex 32)
+#API_KEY=$(openssl rand -hex 32)
 
 echo -e "${BLUE}Xivi: Creating Python script... 🐍${RESET}"
 cat << EOF > app.py
