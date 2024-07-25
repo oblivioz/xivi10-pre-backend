@@ -24,7 +24,12 @@ source venv/bin/activate
 echo -e "${BLUE}Xivi: Installing Python dependencies... 📚${RESET}"
 pip install flask flask_httpauth requests docker cryptography
 
-#API_KEY=$(openssl rand -hex 32)
+cat << EOF > hash
+$RANDOM$RANDOM$RANDOM$RANDOM
+EOF
+
+export API_KEY=$(sha512sum hash | awk '{print $1}')
+rm -f hash
 
 echo -e "${BLUE}Xivi: Creating Python script... 🐍${RESET}"
 cat << EOF > app.py
@@ -44,7 +49,7 @@ import hashlib
 app = Flask(__name__)
 auth = HTTPTokenAuth(scheme='Bearer')
 
-API_KEY = hashlib.sha512(str(random.randint(1, 32767)).encode()).hexdigest()
+API_KEY=os.getenv("API_KEY")
 tokens = {API_KEY: "user"}
 
 @auth.verify_token
@@ -70,7 +75,7 @@ def start_instance():
         vnc = random.randint(49153, 65550)
         while vnc == novnc:
             novnc = random.randint(49153, 65560)
-        c = client.containers.run("newprixmix", ports={6080:novnc, 5901:vnc}, detach=True, mem_limit="1024m", oom_kill_disable=True) # replace with actual xivi container image name
+        c = client.containers.run("XIVI-CONTAINER-NAME", ports={6080:novnc, 5901:vnc}, detach=True, mem_limit="1024m", oom_kill_disable=True) # replace with actual xivi container image name
         return jsonify({
             "message": f"Xivi instance started 🚀",
             "id": c.id,
@@ -100,24 +105,24 @@ def delete_instance():
 @auth.login_required
 def list_instances():
     client = docker.from_env()
-    c = client.containers.list(filters={"ancestor":"newprixmix"}) # replace with xivi container image name
+    c = client.containers.list(filters={"ancestor":"XIVI-CONTAINER-NAME"}) # replace with xivi container image name
     return jsonify({"instances": str(c)}), 200 # improve this later please (make Container class json serializable)
     #############################
     ### for better container management, store containers in a prisma db
     #############################
 if __name__ == '__main__':
-    print(f"API Key: {API_KEY}")
     print("App running on port: 5000 🎉")
     app.run(host='0.0.0.0', port=5000, debug=True)
 
 EOF
 
 SERVER_IP=$(ip route get 1 | awk '{print $7;exit}')
-
 echo -e "${GREEN}Xivi setup complete! 🎉${RESET}"
 echo -e "To start the API, run the following command:"
 echo -e "${YELLOW}cd ~/xivi-web-interface && source venv/bin/activate && python app.py${RESET}"
 echo -e "The app will run on port 5000."
+echo -e "${RED}Your API key is ${API_KEY}${RESET}"
+unset API_KEY
 echo -e "Access your Xivi application at: ${YELLOW}http://${SERVER_IP}:5000${RESET}"
 
 #echo -e "${RED}Your API Key is: ${YELLOW}${API_KEY}${RESET}"
